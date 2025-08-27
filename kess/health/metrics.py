@@ -42,6 +42,7 @@ class MetricsServer:
         self.next_sync_eta = None
         self.readiness = None
         self.liveness = None
+        self.shutdown_status = None
         self.sync_duration = None
 
 
@@ -82,6 +83,7 @@ class MetricsServer:
 
             self.readiness = Gauge("kess_readiness", "Readiness (1=ready, 0=not ready)")
             self.liveness = Gauge("kess_liveness", "Liveness (1=live, 0=not live)")
+            self.shutdown_status = Gauge("kess_shutdown_status", "Shutdown status (1=shutting down, 0=running)")
 
             self.sync_duration = Histogram(
                 "kess_sync_duration_seconds",
