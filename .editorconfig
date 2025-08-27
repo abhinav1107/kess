@@ -1,0 +1,38 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Unix-style newlines with a newline ending every file
+[*]
+charset = utf-8
+end_of_line = lf
+indent_size = 4
+indent_style = space
+max_line_length = 120
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Python files
+[*.py]
+max_line_length = 88
+
+# Shell scripts
+[*.{sh,bash}]
+indent_size = 2
+
+# YAML files
+[{*.yaml,*.yml}]
+indent_size = 2
+
+# Markdown files
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = off
+
+# Docker files
+[Dockerfile]
+indent_size = 2
+
+[Makefile]
+indent_style = tab
