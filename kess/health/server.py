@@ -60,6 +60,7 @@ class HealthServer:
         # Flags & state
         self._ready = threading.Event()
         self._live_ok = True
+        self._shutting_down = False
         self._started_at = int(time.time())
         self._last_sync_ts: Optional[int] = None
         self._next_sync_in: Optional[int] = None
@@ -149,6 +150,15 @@ class HealthServer:
             self._ready.clear()
             self._log.info("Readiness set to false")
 
+    def set_shutting_down(self, shutting_down: bool) -> None:
+        """Set shutdown flag to indicate application is shutting down."""
+        with self._state_lock:
+            self._shutting_down = shutting_down
+        if shutting_down:
+            self._log.info("Health server marked as shutting down")
+        else:
+            self._log.info("Health server shutdown flag cleared")
+
     def set_liveness_ok(self, ok: bool, *, reason: Optional[str] = None) -> None:
         """
         If set to False, /healthz will return 503. Keep it True during graceful shutdown
@@ -234,11 +244,22 @@ class HealthServer:
     def _handle_healthz(self) -> Tuple[int, str]:
         with self._state_lock:
             live_ok = self._live_ok
-        if live_ok:
+            shutting_down = self._shutting_down
+        
+        if shutting_down:
+            return 200, "shutting down\n"  # Still alive during shutdown
+        elif live_ok:
             return 200, "ok\n"
-        return 503, "not ok\n"
+        else:
+            return 503, "not ok\n"
 
     def _handle_readyz(self) -> Tuple[int, str]:
+        with self._state_lock:
+            shutting_down = self._shutting_down
+        
+        if shutting_down:
+            return 503, "shutting down\n"  # Not ready for new work during shutdown
+        
         if not self._ready.is_set():
             return 503, "not ready\n"
 
@@ -260,14 +281,16 @@ class HealthServer:
             last_sync = self._last_sync_ts
             next_sync = self._next_sync_in
             live_ok = self._live_ok
+            shutting_down = self._shutting_down
             started = self._started_at
 
         ready_flag = self._ready.is_set()
         _, details = self._eval_checks()
         payload: Dict[str, Any] = {
             "prog": self.prog,
-            "ready": bool(ready_flag),
+            "ready": bool(ready_flag) and not shutting_down,
             "live": bool(live_ok),
+            "shutting_down": shutting_down,
             "since": started,            # unix ts the server started
             "last_sync": last_sync,      # unix ts or null
             "next_sync_in": next_sync,   # seconds or null
